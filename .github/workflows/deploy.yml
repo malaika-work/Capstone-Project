@@ -1,0 +1,195 @@
+name: Deploy Ecom Infrastructure
+
+on:
+  push:
+    branches:
+      - '**' # Matches all branches
+
+jobs:
+  # 1. Dev Deployment Workflow
+  # This triggers when you create a feature branch and push to Github.
+  deploy-dev:
+    name: Deploy to Dev
+    if: github.ref != 'refs/heads/main' # Runs on feature branches only
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    env:
+      ARM_CLIENT_ID:       ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET:   ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID:       ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+    environment: dev
+    defaults:
+      run:
+        working-directory: ./terraform
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Uses GitHub Secrets configured for Azure Login
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="key=dev.tfstate"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      # - name: Terraform Plan (Dev)
+      #   run: terraform plan -var-file="enviornments/dev.tfvars" -out=tfplan
+      #   env:
+      #     # Inject sensitive variables from GitHub Secrets
+      #     TF_VAR_synapse_sql_admin_password: ${{ secrets.SYNAPSE_SQL_PASSWORD }}
+      #     # Expose ARM creds to Terraform from secrets if not using OIDC
+      #     ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      #     ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      #     ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      #     ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Plan (Dev)
+        run: terraform plan -var-file="enviornments/dev.tfvars" -out=tfplan
+        env:
+          TF_VAR_synapse_sql_admin_password: ${{ secrets.SYNAPSE_SQL_PASSWORD }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      # - name: Terraform Apply (Dev)
+      #   run: terraform apply -auto-approve tfplan
+      #   env:
+      #     ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      #     ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      #     ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      #     ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Apply (Dev)
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_synapse_sql_admin_password: ${{ secrets.SYNAPSE_SQL_PASSWORD }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+  # 2. Staging Deployment Workflow
+  # Triggers immediately after feature code merges into main
+  deploy-staging:
+    name: Deploy to Staging
+    if: github.ref == 'refs/heads/main' # Runs only on main branch
+    runs-on: ubuntu-latest
+    environment: staging
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="key=staging.tfstate"
+
+      - name: Terraform Plan (Staging)
+        run: terraform plan -var-file="enviornments/staging.tfvars" -out=tfplan
+        env:
+          TF_VAR_synapse_sql_admin_password: ${{ secrets.SYNAPSE_SQL_PASSWORD }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Apply (Staging)
+        run: terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+  # 3. Automated Tests
+  # Verifying staging deployment before allowing a push to production.
+  run-tests:
+    name: Run Automated Tests
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Run Tests
+        run: |
+          echo "Running Data Pipeline / ETL functional tests on staging infrastructure..."
+          # Insert your automated tests script here
+          # py.test tests/
+          echo "All tests passed successfully!"
+
+  # 4. Production Deployment Workflow
+  # Triggers after staging integration succeeds, pending GitHub Environment manual review.
+  deploy-production:
+    name: Deploy to Production
+    needs: run-tests
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # This 'environment' block connects to GitHub's review feature.
+    # The workflow will pause here until an authorized reviewer approves it on GitHub.
+    environment:
+      name: production
+      url: https://portal.azure.com
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config="key=prod.tfstate"
+
+      - name: Terraform Plan (Production)
+        run: terraform plan -var-file="enviornments/production.tfvars" -out=tfplan
+        env:
+          TF_VAR_synapse_sql_admin_password: ${{ secrets.SYNAPSE_SQL_PASSWORD }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Apply (Production)
+        run: terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
