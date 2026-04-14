@@ -17,7 +17,7 @@ terraform {
   #   prod:    -backend-config="key=prod.tfstate"
   backend "azurerm" {
     resource_group_name  = "ecom-tfstate-rg"
-    storage_account_name = "ecomtfstate"
+    storage_account_name = "ecomtfstate12345"
     container_name       = "tfstate"
     key                  = "ecom.terraform.tfstate"
   }
