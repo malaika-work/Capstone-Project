@@ -1,14 +1,14 @@
 # locals.tf
 
 locals {
-  project     = "ecom"
-  environment = var.environment
+  project      = "ecom"
+  environment  = var.environment
   created_date = formatdate("YYYY-MM-DD", timestamp())
 
   tags = {
-    project     = local.project
-    environment = local.environment
-    managed_by  = "terraform"
+    project      = local.project
+    environment  = local.environment
+    managed_by   = "terraform"
     created_date = local.created_date
   }
 

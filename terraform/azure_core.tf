@@ -100,11 +100,11 @@ resource "azurerm_key_vault" "ecom" {
 
 # ── Event Hub Namespace ───────────────────────────────────────
 resource "azurerm_eventhub_namespace" "ecom" {
-  name                = "${local.resource_prefix}-ehns"
-  location            = azurerm_resource_group.ecom.location
-  resource_group_name = azurerm_resource_group.ecom.name
-  sku                 = "Standard"
-  capacity            = 1
+  name                 = "${local.resource_prefix}-ehns"
+  location             = azurerm_resource_group.ecom.location
+  resource_group_name  = azurerm_resource_group.ecom.name
+  sku                  = "Standard"
+  capacity             = 1
   auto_inflate_enabled = false
 
   tags = local.tags
