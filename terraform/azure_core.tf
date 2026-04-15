@@ -55,7 +55,7 @@ resource "azurerm_storage_data_lake_gen2_filesystem" "synapse" {
 
 # ── Azure Data Factory (No linked services) ────────────────────
 resource "azurerm_data_factory" "ecom" {
-  name                = "${local.resource_prefix}-adf"
+  name                = "${local.resource_prefix}-capstone-adf"
   location            = azurerm_resource_group.ecom.location
   resource_group_name = azurerm_resource_group.ecom.name
 
@@ -87,7 +87,7 @@ resource "azurerm_synapse_workspace" "ecom" {
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "ecom" {
-  name                       = "${local.resource_prefix}-kv"
+  name                       = "${local.resource_prefix}-capstone-kv"
   location                   = azurerm_resource_group.ecom.location
   resource_group_name        = azurerm_resource_group.ecom.name
   tenant_id                  = data.azurerm_client_config.current.tenant_id
