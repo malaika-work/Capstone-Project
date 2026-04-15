@@ -83,21 +83,6 @@ resource "azurerm_synapse_workspace" "ecom" {
   tags = local.tags
 }
 
-# ── Key Vault (Shell ONLY) ─────────────────────────────────────
-data "azurerm_client_config" "current" {}
-
-resource "azurerm_key_vault" "ecom" {
-  name                       = "${local.resource_prefix}-capstone-kv"
-  location                   = azurerm_resource_group.ecom.location
-  resource_group_name        = azurerm_resource_group.ecom.name
-  tenant_id                  = data.azurerm_client_config.current.tenant_id
-  sku_name                   = "standard"
-  soft_delete_retention_days = 7
-  purge_protection_enabled   = false
-  enable_rbac_authorization  = true
-  tags                       = local.tags
-}
-
 # ── Event Hub Namespace ───────────────────────────────────────
 resource "azurerm_eventhub_namespace" "ecom" {
   name                 = "${local.resource_prefix}-ehns"
