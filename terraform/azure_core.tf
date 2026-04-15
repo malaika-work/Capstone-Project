@@ -156,10 +156,6 @@ output "synapse_principal_id" {
   value = azurerm_synapse_workspace.ecom.identity[0].principal_id
 }
 
-output "key_vault_uri" {
-  value = azurerm_key_vault.ecom.vault_uri
-}
-
 output "eventhub_producer_connection_string" {
   value     = azurerm_eventhub_authorization_rule.producer.primary_connection_string
   sensitive = true
