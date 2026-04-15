@@ -143,6 +143,14 @@ resource "azurerm_eventhub_authorization_rule" "adf_listener" {
   listen              = true
 }
 
+resource "azurerm_eventhub_authorization_rule" "databricks_listener" {
+  name                = "databricks-listener"
+  namespace_name      = azurerm_eventhub_namespace.ecom.name
+  eventhub_name       = azurerm_eventhub.weather.name
+  resource_group_name = azurerm_resource_group.ecom.name
+  listen              = true
+}
+
 # ── Outputs (used for manual setup) ───────────────────────────
 output "adls_account_name" {
   value = azurerm_storage_account.adls.name
@@ -163,5 +171,10 @@ output "eventhub_producer_connection_string" {
 
 output "eventhub_adf_connection_string" {
   value     = azurerm_eventhub_authorization_rule.adf_listener.primary_connection_string
+  sensitive = true
+}
+
+output "eventhub_databricks_connection_string" {
+  value     = azurerm_eventhub_authorization_rule.databricks_listener.primary_connection_string
   sensitive = true
 }

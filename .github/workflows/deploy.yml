@@ -26,7 +26,7 @@ jobs:
     defaults:
       run:
         working-directory: ./terraform
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Run Tests
         run: |
           echo "Running Data Pipeline / ETL functional tests on staging infrastructure..."
